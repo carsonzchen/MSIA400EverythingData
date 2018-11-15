@@ -1,0 +1,125 @@
+---
+title: "Lab Assignment 2_Carson Chen"
+author: "Carson Chen"
+date: "11/11/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Recall that RS and SD have missing values. Calculate the averages of RS and SD by ignoring the missing values.
+```{r 1}
+# 1)
+redwine <- read.delim("~/Everything Data Lab/data/redwine.txt")
+mean_rs = mean(redwine$RS, na.rm = T)
+'Average of RS'
+mean_rs
+mean_sd = mean(redwine$SD, na.rm = T)
+'Average of SD'
+mean_sd
+```
+
+2. After correlation analysis, Mr. Klabjan observed that there exists a significant correlation between SD and FS. Create vectors of SD.obs and FS.obs by omitting observations with missing values in SD. Build (simple)
+linear regression model to estimate SD.obs using FS.obs. That is, SD.obs is used as response variable and FS.obs is used as explanatory variable for the regression analysis. Print out the coefficients of the regression model.
+```{r 2}
+# 2)
+fit1 <- lm(SD ~ FS, data=redwine)
+'Regression model coefficients'
+coefficients(fit1)
+```
+
+3. Create a vector (of length 17) of estimated SD values using the regression model in Problem 2 and FS values of the observations with missing SD values. Impute missing values of SD using the created vector. Print out
+the average of SD after the imputation.
+```{r 3}
+# 3)
+FStofill <- redwine$FS[is.na(redwine$SD) == T]
+SDtofill = coefficients(fit1)[[1]] + coefficients(fit1)[[2]]*FStofill
+redwine$SD[is.na(redwine$SD) == T] <- SDtofill
+'Average of SD after imputation'
+mean(redwine$SD)
+```
+
+4. Mr. Klabjan decided RS is not significantly correlated to other attributes. Impute missing values of RS using the average value imputation method from the lab. Print out the average of RS after the imputation.
+```{r 4}
+# 4)
+avg.imp <- function (input, avg){
+        missval <- is.na(input)
+        imputed <- input
+        imputed[missval] <- avg
+        return (imputed)
+   }
+redwine$RS = avg.imp(redwine$RS, mean_rs)
+'Average of RS'
+mean(redwine$RS)
+```
+
+5. We have imputed all missing values in the data set. Build multiple linear regression model for the new data set and save it as winemodel. Print out the coefficients of the regression model.
+```{r 5}
+# 5)
+fitfull <- lm(QA ~ .,data = redwine)
+'Coefficients of the model'
+coefficients(fitfull)
+```
+
+6. Print out the summary of the model. Pick one attribute that is least likely to be related to QA based on p-values.
+```{r 6}
+# 6)
+summary(fitfull)
+```
+As we can see, the least significant variable with the highest p-value is PH.
+
+7. Perform 5-fold cross validation for the model you just built. Print out the average error rate.
+```{r 7}
+# 7)
+CV5 <- function(df) {
+  k <- nrow(df)
+  parts <- suppressWarnings(split(sample(1:k), c(1, 2, 3, 4, 5)))
+  result_set <- list()
+  for (i in 1:5){
+    test_set <- df[parts[[i]],]
+    train_set <- df[-parts[[i]],]
+    fit_train <- lm(QA ~ .,data = train_set)
+    pred_result <- predict(fit_train, test_set)
+    MSE <- (test_set$QA - pred_result)^2/nrow(test_set)
+    result_set[[i]] <- MSE
+  }
+  MSE5 <- lapply(result_set, sum)
+  return(mean(unlist(MSE5)))
+  }
+
+# Repeat tests for 20 times
+results <- c()
+for (i in 1:20){
+  newmean <- CV5(redwine)
+  results <- c(results, newmean)
+}
+'Average error rate (MSE)'
+mean(results)
+```
+
+8. Mr. Klabjan is informed that the attribute picked in Problem 6 actually contains outliers. Calculate the
+average $\mu$ and standard deviation $\sigma$ of the selected attribute. Create a new data set after removing observations
+that is outside of the range $[\mu-3\sigma; \mu+3\sigma]$ and name the data set as redwine2. Print out the dimension
+of redwine2 to know how many observations are removed.
+```{r 8}
+# 8)
+mean_ph <- mean(redwine$PH)
+sd_ph <- sd(redwine$PH)
+ubound <- mean_ph + 3 * sd_ph
+lbound <- mean_ph - 3 * sd_ph
+redwine2 <- subset(redwine, PH < ubound & PH > lbound)
+'Dimension of redwine 2'
+dim(redwine2)
+```
+Therefore, 19 variables are removed after removing outliers.
+
+9. Build regression model winemodel2 using the new data set from Problem 8 and print out the summary. Compare this model with the model obtained in Problem 6 and decide which one is better. Pick 5 attributes that is most likely to be related to QA based on p-values.
+```{r 9}
+# 9)
+fit2 <- lm(QA ~ .,data = redwine2)
+summary(fit2)
+drop1(fit2, test = 'F')
+```
+winemodel2 is slightly better, as it has slightly higher adjusted $R^2$ value and more significant F-statistic, indicating better overall fit. Based on p-values, the 5 most signficant attributes are AL, VA, SU, CH, and SD.

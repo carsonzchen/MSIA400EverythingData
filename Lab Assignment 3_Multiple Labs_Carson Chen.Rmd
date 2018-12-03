@@ -1,0 +1,72 @@
+---
+title: "Lab Assignment 3_Carson Chen"
+author: "Carson Chen"
+date: "11/29/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+####a. What is the purpose of doing Markov Chain Monte Carlo (MCMC)?
+The purpose of MCMC is to computationally obtain sample points from complex probability distributions. Sample points from distribution 𝑝(⋅) that is difficult to sample from directly, and we use MCMC Method to construct a Markov Chain whose stationary distribution is exactly equal to our target distribution 𝑝(⋅) .
+
+####b. What is the difference between the Metropolis Algorithm and the Metropolis Hastings Algorithm?
+Metropolis Algorithm is a special case of the Metropolis Hastings Algorithm; Metropolis Algorithm requires a random draw from a symmetrical “jump” distribution q(.|.) centered on the current parameter value, while asymmetrical "jump" distribution q(.|.) is allowed for MH.
+
+####c. What is the purpose of Ridge regression? What is the purpose of LASSO regression?
+Both of the regressions are penalized regressions to put additional constraints on SSE, so they can deal with severe multicolinearity issues that the variance of coefficients are too large. Lasso regression, in addition, could force coefficients to be zero and helps to get rid of predictors, thus used for variable selection.
+
+####d. State the IIA assumption for Multinomial Logit discrete choice model.
+The ratio of the probabilities of choosing two alternatives is independent of the presence or attributes of any other alternative. 
+
+## Problem 2
+### a)
+```{r 2a}
+library(readr)
+library(quantreg)
+gas_mileage <- read_csv("data/gas_mileage.csv")
+fit1 <- rq(Mpg~.,tau=seq(5,100,5)/100, data=gas_mileage)
+```
+
+### b)
+```{r 2b}
+plot(fit1,mfrow = c(1,2))
+```
+
+### c)
+Displacement: No matter which quantile, increase in displacement always decreases mpg. For up to 40th percentile of the mpg data, coefficients of displacement are slightly negative. The coefficients are significantly more negative for the upper 60% of the mpg data.
+
+Torque: No matter which quantile, increase in torque always increases mpg. For the up to 40th percentile of the mpg data, coefficients of torque are small and positive. The coefficients are much larger for the upper 60% of the mpg data.
+
+Trans_type: The relationship between mpg and transtype depends on the quantiles of the data. For up to 35th percentile of the mpg data, coefficients of trans_type are slightly negative. The coefficients become positive for the middle 35th to 75th percentile, and the coefficients become largely negative for the 75th percentile and above of the mpg
+
+### d)
+```{r 2d}
+fitmedian <- rq(Mpg~.,tau=0.5, data=gas_mileage)
+summary(fitmedian, se = "boot")
+```
+
+## Problem 3
+### a)
+```{r 3a}
+library(e1071)
+car <- read_csv("data/car.csv")
+svm = svm(factor(y) ~ income + car_age, data = car)
+```
+
+### b)
+```{r 3b}
+summary(svm)
+plot(svm, car, income~car_age)
+```
+
+### c)
+```{r 3c}
+new_family <- with(car, data.frame(income = 50, car_age = 5))
+new_family$predicted <- predict(svm, newdata = new_family, type = "response")
+new_family
+```
+Since predicted = 1, this family purchases a new car.
